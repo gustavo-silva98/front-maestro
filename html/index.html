@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maestro</title>
+
+  <!--
+    Google Fonts via CDN — degradação graciosa:
+    se a rede corporativa bloquear, o browser usa a fonte do sistema. Aceitável.
+    Chart.js NÃO está no CDN. Veja instrução no final do arquivo.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Tokens ─────────────────────────────────────────────── */
+    :root {
+      --bg:             #0D0F14;
+      --surface:        #141820;
+      --surface-raised: #1A1F2E;
+      --border:         #222840;
+      --border-hover:   #3A4060;
+      --text-primary:   #E2DDD4;
+      --text-secondary: #7A8799;
+      --text-dim:       #404B5C;
+      --accent:         #C9933A;   /* latão — identidade Maestro */
+      --success:        #3DB87A;
+      --fail:           #D95F54;
+      --timeout:        #D4904A;
+      --font-display:   'Space Grotesk', system-ui, sans-serif;
+      --font-mono:      'JetBrains Mono', 'Courier New', monospace;
+    }
+
+    /* ── Reset ──────────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-display);
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Banner de dados desatualizados ─────────────────────── */
+    .stale-banner {
+      background: #1A1218;
+      border-bottom: 1px solid #3D1F1C;
+      color: #C08080;
+      font-size: 0.775rem;
+      letter-spacing: 0.025em;
+      padding: 10px 32px;
+      text-align: center;
+    }
+    .stale-banner[hidden] { display: none; }
+
+    /* ── Wrapper ────────────────────────────────────────────── */
+    .wrapper {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 32px 52px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+    }
+
+    .brand-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .brand-sub {
+      font-size: 0.775rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.03em;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .last-updated {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    /* ── Pulse dot — elemento-assinatura ────────────────────── */
+    /*                                                           */
+    /* Um único ponto que respira enquanto a API está viva.     */
+    /* Para imediatamente quando offline.                        */
+    /* Nenhuma outra animação na página.                         */
+    .pulse-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: breathe 2.6s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .pulse-dot.is-offline {
+      background: var(--text-dim);
+      animation: none;
+    }
+
+    .pulse-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      letter-spacing: 0.08em;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 1;   transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pulse-dot { animation: none; }
+    }
+
+    /* ── Cards ──────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 22px 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover { border-color: var(--border-hover); }
+
+    .card-label {
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    .card-value {
+      font-family: var(--font-mono);
+      font-size: 2.1rem;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--text-primary);
+      transition: color 0.3s;
+    }
+
+    /* Modificadores de cor — aplicados via JS */
+    .card-value.is-accent  { color: var(--accent); }
+    .card-value.is-success { color: var(--success); }
+    .card-value.is-fail    { color: var(--fail); }
+
+    .card-hint {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* ── Gráfico ────────────────────────────────────────────── */
+    .chart-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 24px 26px 22px;
+      margin-top: 14px;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .chart-title {
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 18px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .chart-canvas-wrap {
+      position: relative;
+      height: 230px;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 780px) {
+      .cards     { grid-template-columns: repeat(2, 1fr); }
+      .brand-sub { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .wrapper       { padding: 0 16px 32px; }
+      .chart-legend  { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Visível só quando a API está inacessível -->
+  <div id="stale-banner" class="stale-banner" hidden>
+    Dados desatualizados — API inacessível desde <span id="stale-time"></span>
+  </div>
+
+  <div class="wrapper">
+
+    <header class="header">
+      <div class="brand">
+        <span class="brand-name">Maestro</span>
+        <span class="brand-sub">IAM Automation Platform</span>
+      </div>
+      <div class="header-meta">
+        <span class="last-updated" id="last-updated">—</span>
+        <div class="pulse-wrap">
+          <div class="pulse-dot" id="pulse-dot"></div>
+          <span class="pulse-label" id="pulse-label">live</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="cards">
+      <div class="card">
+        <span class="card-label">Jobs hoje</span>
+        <span class="card-value" id="val-jobs-today">—</span>
+        <span class="card-hint">execuções no dia</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Taxa de sucesso</span>
+        <span class="card-value" id="val-success-rate">—</span>
+        <span class="card-hint">últimas 24h</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Tempo economizado</span>
+        <span class="card-value is-accent" id="val-saved-minutes">—</span>
+        <span class="card-hint">minutos acumulados</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Falhas (24h)</span>
+        <span class="card-value" id="val-failures-24h">—</span>
+        <span class="card-hint">requerem atenção</span>
+      </div>
+    </div>
+
+    <div class="chart-section">
+      <div class="chart-header">
+        <span class="chart-title">Execuções — últimos 7 dias</span>
+        <div class="chart-legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#3DB87A"></div>
+            <span>Sucesso</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#D95F54"></div>
+            <span>Falha</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#D4904A"></div>
+            <span>Timeout</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap">
+        <canvas id="timeline-chart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!--
+    ╔══════════════════════════════════════════════════════════════╗
+    ║  Chart.js — SELF-HOSTED, não carregado de CDN              ║
+    ║  Motivo: rede corporativa pode bloquear CDNs silenciosamente║
+    ║                                                              ║
+    ║  Para baixar (rodar na EC2):                                ║
+    ║    curl -o /var/www/maestro/chart.min.js \                  ║
+    ║      https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js
+    ║                                                              ║
+    ║  Deve estar no mesmo diretório que index.html.              ║
+    ╚══════════════════════════════════════════════════════════════╝
+  -->
+  <script src="./chart.min.js"></script>
+
+  <script>
+    // ── Configuração ────────────────────────────────────────────
+    // Ajuste os dois paths abaixo para seus endpoints reais.
+
+    const API_SUMMARY  = '/api/stats/summary'
+    const API_TIMELINE = '/api/stats/timeline?days=7'
+    const REFRESH_MS   = 30_000
+
+    // Shape esperado de API_SUMMARY:
+    // {
+    //   "jobs_today":    12,
+    //   "success_rate":  94.2,   // float, 0–100
+    //   "saved_minutes": 83,     // int ou float
+    //   "failures_24h":  2       // int
+    // }
+    //
+    // Shape esperado de API_TIMELINE:
+    // {
+    //   "labels":  ["15/06","16/06","17/06","18/06","19/06","20/06","21/06"],
+    //   "success": [10, 8, 12, 15, 9, 11, 4],
+    //   "failed":  [1,  2,  0,  1,  3,  0,  1],
+    //   "timeout": [0,  1,  0,  0,  0,  1,  0]
+    // }
+
+    // ── Estado ──────────────────────────────────────────────────
+    let lastOkTime = null
+    let chart      = null
+
+    // ── Chart.js ────────────────────────────────────────────────
+    function initChart() {
+      const ctx = document.getElementById('timeline-chart').getContext('2d')
+
+      const makeDataset = (label, color, data) => ({
+        label,
+        data,
+        borderColor:          color,
+        backgroundColor:      color + '14',  // hex alpha 8% — fill sutil abaixo da linha
+        borderWidth:          2,
+        pointRadius:          4,
+        pointHoverRadius:     6,
+        pointBackgroundColor: color,
+        pointBorderWidth:     0,
+        fill:                 true,
+        tension:              0.35,
+      })
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels:   [],
+          datasets: [
+            makeDataset('Sucesso', '#3DB87A', []),
+            makeDataset('Falha',   '#D95F54', []),
+            makeDataset('Timeout', '#D4904A', []),
+          ],
+        },
+        options: {
+          responsive:          true,
+          maintainAspectRatio: false,
+          interaction:         { mode: 'index', intersect: false },
+          plugins: {
+            legend:  { display: false },  // legenda customizada no HTML acima
+            tooltip: {
+              backgroundColor: '#1A1F2E',
+              borderColor:     '#222840',
+              borderWidth:     1,
+              titleColor:      '#E2DDD4',
+              bodyColor:       '#7A8799',
+              padding:         12,
+              cornerRadius:    4,
+            },
+          },
+          scales: {
+            x: {
+              grid:   { color: '#1A1F2E' },
+              border: { color: '#222840' },
+              ticks:  { color: '#7A8799', font: { family: "'JetBrains Mono', monospace", size: 11 } },
+            },
+            y: {
+              beginAtZero: true,
+              grid:        { color: '#1A1F2E' },
+              border:      { color: '#222840' },
+              ticks:       { color: '#7A8799', font: { family: "'JetBrains Mono', monospace", size: 11 }, precision: 0 },
+            },
+          },
+        },
+      })
+    }
+
+    // ── Atualiza cards ──────────────────────────────────────────
+    function updateCards(d) {
+      document.getElementById('val-jobs-today').textContent =
+        d.jobs_today ?? '—'
+
+      document.getElementById('val-saved-minutes').textContent =
+        d.saved_minutes != null ? d.saved_minutes + ' min' : '—'
+
+      const rate   = parseFloat(d.success_rate)
+      const rateEl = document.getElementById('val-success-rate')
+      if (isNaN(rate)) {
+        rateEl.textContent = '—'
+        rateEl.className   = 'card-value'
+      } else {
+        rateEl.textContent = rate.toFixed(1) + '%'
+        rateEl.className   = 'card-value ' + (rate >= 90 ? 'is-success' : 'is-fail')
+      }
+
+      const failures = parseInt(d.failures_24h, 10)
+      const failEl   = document.getElementById('val-failures-24h')
+      failEl.textContent = isNaN(failures) ? '—' : failures
+      failEl.className   = 'card-value ' + (failures > 0 ? 'is-fail' : '')
+    }
+
+    // ── Atualiza gráfico ────────────────────────────────────────
+    function updateChart(d) {
+      chart.data.labels           = d.labels  ?? []
+      chart.data.datasets[0].data = d.success ?? []
+      chart.data.datasets[1].data = d.failed  ?? []
+      chart.data.datasets[2].data = d.timeout ?? []
+      chart.update()
+    }
+
+    // ── Online / offline ────────────────────────────────────────
+    function setOnline() {
+      document.getElementById('pulse-dot').classList.remove('is-offline')
+      document.getElementById('pulse-label').textContent = 'live'
+      document.getElementById('stale-banner').hidden = true
+    }
+
+    function setOffline() {
+      document.getElementById('pulse-dot').classList.add('is-offline')
+      document.getElementById('pulse-label').textContent = 'offline'
+
+      document.getElementById('stale-time').textContent = lastOkTime
+        ? lastOkTime.toLocaleTimeString('pt-BR')
+        : 'horário desconhecido'
+      document.getElementById('stale-banner').hidden = false
+    }
+
+    // ── Fetch ───────────────────────────────────────────────────
+    async function fetchAll() {
+      const fetchJSON = url =>
+        fetch(url).then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`)
+          return r.json()
+        })
+
+      const [summary, timeline] = await Promise.allSettled([
+        fetchJSON(API_SUMMARY),
+        fetchJSON(API_TIMELINE),
+      ])
+
+      if (summary.status === 'fulfilled' && timeline.status === 'fulfilled') {
+        updateCards(summary.value)
+        updateChart(timeline.value)
+        lastOkTime = new Date()
+        document.getElementById('last-updated').textContent =
+          'atualizado às ' + lastOkTime.toLocaleTimeString('pt-BR')
+        setOnline()
+      } else {
+        setOffline()
+        // dados anteriores permanecem visíveis no chart e nos cards
+        console.warn('[maestro] fetch falhou —',
+          summary.reason  ?? 'summary ok',
+          timeline.reason ?? 'timeline ok',
+        )
+      }
+    }
+
+    // ── Boot ────────────────────────────────────────────────────
+    initChart()
+    fetchAll()
+    setInterval(fetchAll, REFRESH_MS)
+  </script>
+
+</body>
+</html>
