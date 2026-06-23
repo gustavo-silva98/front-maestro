@@ -6,223 +6,260 @@
   <title>Maestro</title>
 
   <!--
-    Google Fonts via CDN — degradação graciosa:
-    se a rede corporativa bloquear, o browser usa a fonte do sistema. Aceitável.
-    Chart.js NÃO está no CDN. Veja instrução no final do arquivo.
+    Google Fonts via CDN.
+    Se a rede corporativa bloquear, o browser usa fallback do sistema — aceitável.
+    Chart.js foi removido. Nenhuma outra dependência externa.
   -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" type="text/css"/>
-  
 </head>
 
 <body>
 
-  <!-- Visível só quando a API está inacessível -->
   <div id="stale-banner" class="stale-banner" hidden>
     Dados desatualizados — API inacessível desde <span id="stale-time"></span>
   </div>
 
-  <div class="wrapper">
+  <!-- ══════════════════════════════════════════════════════════
+       TELA DE LOGIN
+  ══════════════════════════════════════════════════════════ -->
+  <div id="login-screen" class="screen">
+    <div class="login-box">
+      <div class="brand-logo">Maestro</div>
+      <div class="brand-sub">IAM Automation Platform</div>
 
-    <header class="header">
-      <div class="brand">
-        <span class="brand-name">Maestro</span>
-        <span class="brand-sub">IAM Automation Platform</span>
+      <div class="input-group">
+        <label for="username">Usuário</label>
+        <input type="text" id="username" placeholder="admin" autocomplete="off">
       </div>
-      <div class="header-meta">
-        <span class="last-updated" id="last-updated">—</span>
-        <div class="pulse-wrap">
-          <div class="pulse-dot" id="pulse-dot"></div>
-          <span class="pulse-label" id="pulse-label">live</span>
-        </div>
+      <div class="input-group">
+        <label for="password">Senha</label>
+        <input type="password" id="password" placeholder="••••••••">
       </div>
-    </header>
-
-    <div class="cards">
-      <div class="card">
-        <span class="card-label">Jobs hoje</span>
-        <span class="card-value" id="val-jobs-today">—</span>
-        <span class="card-hint">execuções no dia</span>
-      </div>
-      <div class="card">
-        <span class="card-label">Taxa de sucesso</span>
-        <span class="card-value" id="val-success-rate">—</span>
-        <span class="card-hint">últimas 24h</span>
-      </div>
-      <div class="card">
-        <span class="card-label">Tempo economizado</span>
-        <span class="card-value is-accent" id="val-saved-minutes">—</span>
-        <span class="card-hint">minutos acumulados</span>
-      </div>
-      <div class="card">
-        <span class="card-label">Falhas (24h)</span>
-        <span class="card-value" id="val-failures-24h">—</span>
-        <span class="card-hint">requerem atenção</span>
-      </div>
+      <button class="btn-submit" onclick="handleLogin()">Entrar</button>
     </div>
-
-    <div class="chart-section">
-      <div class="chart-header">
-        <span class="chart-title">Execuções — últimos 7 dias</span>
-        <div class="chart-legend">
-          <div class="legend-item">
-            <div class="legend-dot" style="background:#3DB87A"></div>
-            <span>Sucesso</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-dot" style="background:#D95F54"></div>
-            <span>Falha</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-dot" style="background:#D4904A"></div>
-            <span>Timeout</span>
-          </div>
-        </div>
-      </div>
-      <div class="chart-canvas-wrap">
-        <canvas id="timeline-chart"></canvas>
-      </div>
-    </div>
-
   </div>
 
-  <!--
-    ╔══════════════════════════════════════════════════════════════╗
-    ║  Chart.js — SELF-HOSTED, não carregado de CDN              ║
-    ║  Motivo: rede corporativa pode bloquear CDNs silenciosamente║
-    ║                                                              ║
-    ║  Para baixar (rodar na EC2):                                ║
-    ║    curl -o /var/www/maestro/chart.min.js \                  ║
-    ║      https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js
-    ║                                                              ║
-    ║  Deve estar no mesmo diretório que index.html.              ║
-    ╚══════════════════════════════════════════════════════════════╝
-  -->
-  <script src="./chart.min.js"></script>
+  <!-- ══════════════════════════════════════════════════════════
+       DASHBOARD
+  ══════════════════════════════════════════════════════════ -->
+  <div id="dashboard-screen" class="screen is-hidden">
+
+    <div class="wrapper">
+
+      <header class="header">
+        <div class="header-brand">
+          <span class="header-name">Maestro</span>
+          <span class="header-context">IAM Automation Platform</span>
+        </div>
+        <div class="header-meta">
+          <span class="last-updated" id="last-updated">—</span>
+          <div class="pulse-wrap">
+            <div class="pulse-dot" id="pulse-dot"></div>
+            <span class="pulse-label" id="pulse-label">live</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Cards de métricas -->
+      <div class="cards">
+        <div class="card">
+          <span class="card-label">Jobs hoje</span>
+          <span class="card-value" id="val-jobs-today">—</span>
+          <span class="card-hint">execuções no dia</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Taxa de sucesso</span>
+          <span class="card-value" id="val-success-rate">—</span>
+          <span class="card-hint">últimas 24h</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Tempo economizado</span>
+          <span class="card-value is-accent" id="val-saved-minutes">—</span>
+          <span class="card-hint">minutos acumulados</span>
+        </div>
+        <div class="card">
+          <span class="card-label">Falhas (24h)</span>
+          <span class="card-value" id="val-failures-24h">—</span>
+          <span class="card-hint">requerem atenção</span>
+        </div>
+      </div>
+
+      <!-- Lista de jobs -->
+      <div class="job-section">
+        <div class="job-section-header">
+          <span class="job-section-title">Execuções recentes</span>
+          <span class="job-count" id="job-count">—</span>
+        </div>
+        <div class="job-list-header">
+          <span></span><!-- dot -->
+          <span>ID</span>
+          <span>Jira</span>
+          <span>Tenant</span>
+          <span>Job type</span>
+          <span>Status</span>
+          <span>Criado em</span>
+          <span>Finalizado</span>
+          <span>Duração</span>
+        </div>
+        <ul class="job-list" id="job-list">
+          <li class="job-empty">Carregando...</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
 
   <script>
     // ── Configuração ────────────────────────────────────────────
-    // Ajuste os dois paths abaixo para seus endpoints reais.
-
-    const API_SUMMARY  = '/api/stats/summary'
-    const API_TIMELINE = '/api/stats/timeline?days=7'
-    const REFRESH_MS   = 30_000
+    // Ajuste os paths conforme seus endpoints reais.
+    const API_SUMMARY = '/api/status-counts';
+    const API_SAVED_MINUTES = '/api/get-saved-minute';
+    const API_JOBS    = '/api/get-jobs';
+    const REFRESH_MS  = 30_000
 
     // Shape esperado de API_SUMMARY:
-    // {
-    //   "jobs_today":    12,
-    //   "success_rate":  94.2,   // float, 0–100
-    //   "saved_minutes": 83,     // int ou float
-    //   "failures_24h":  2       // int
-    // }
+    // { jobs_today, success_rate (float 0–100), saved_minutes, failures_24h }
     //
-    // Shape esperado de API_TIMELINE:
-    // {
-    //   "labels":  ["15/06","16/06","17/06","18/06","19/06","20/06","21/06"],
-    //   "success": [10, 8, 12, 15, 9, 11, 4],
-    //   "failed":  [1,  2,  0,  1,  3,  0,  1],
-    //   "timeout": [0,  1,  0,  0,  0,  1,  0]
-    // }
+    // Shape esperado de API_JOBS (array):
+    // [{ id, job_type, tenant_name, jira_issue, status, created_at, finished_at }]
+    // status: "success" | "failed" | "timeout" | "running"
+    // datas: ISO 8601 string (ex: "2026-06-22T14:32:01Z")
 
     // ── Estado ──────────────────────────────────────────────────
-    let lastOkTime = null
-    let chart      = null
+    let lastOkTime      = null
+    let dashboardBooted = false
 
-    // ── Chart.js ────────────────────────────────────────────────
-    function initChart() {
-      const ctx = document.getElementById('timeline-chart').getContext('2d')
+    // ── Login ────────────────────────────────────────────────────
+    // Nota: esta tela é cosmética — qualquer pessoa com DevTools
+    // acessa o dashboard diretamente. Na demo, deixe claro que
+    // a autenticação real será Azure Entra ID via OIDC pós-demo.
+    function handleLogin() {
+      const login = document.getElementById('login-screen')
+      const dash  = document.getElementById('dashboard-screen')
 
-      const makeDataset = (label, color, data) => ({
-        label,
-        data,
-        borderColor:          color,
-        backgroundColor:      color + '14',  // hex alpha 8% — fill sutil abaixo da linha
-        borderWidth:          2,
-        pointRadius:          4,
-        pointHoverRadius:     6,
-        pointBackgroundColor: color,
-        pointBorderWidth:     0,
-        fill:                 true,
-        tension:              0.35,
-      })
+      login.classList.add('is-hidden')
 
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels:   [],
-          datasets: [
-            makeDataset('Sucesso', '#3DB87A', []),
-            makeDataset('Falha',   '#D95F54', []),
-            makeDataset('Timeout', '#D4904A', []),
-          ],
-        },
-        options: {
-          responsive:          true,
-          maintainAspectRatio: false,
-          interaction:         { mode: 'index', intersect: false },
-          plugins: {
-            legend:  { display: false },  // legenda customizada no HTML acima
-            tooltip: {
-              backgroundColor: '#1A1F2E',
-              borderColor:     '#222840',
-              borderWidth:     1,
-              titleColor:      '#E2DDD4',
-              bodyColor:       '#7A8799',
-              padding:         12,
-              cornerRadius:    4,
-            },
-          },
-          scales: {
-            x: {
-              grid:   { color: '#1A1F2E' },
-              border: { color: '#222840' },
-              ticks:  { color: '#7A8799', font: { family: "'JetBrains Mono', monospace", size: 11 } },
-            },
-            y: {
-              beginAtZero: true,
-              grid:        { color: '#1A1F2E' },
-              border:      { color: '#222840' },
-              ticks:       { color: '#7A8799', font: { family: "'JetBrains Mono', monospace", size: 11 }, precision: 0 },
-            },
-          },
-        },
+      setTimeout(() => {
+        dash.classList.remove('is-hidden')
+
+        // Só inicializa uma vez — evita registrar múltiplos setInterval
+        // se o usuário "fizer login" mais de uma vez na mesma sessão.
+        if (!dashboardBooted) {
+          dashboardBooted = true
+          fetchAll()
+          setInterval(fetchAll, REFRESH_MS)
+        }
+      }, 280)
+    }
+
+    // ── Utilitários de formatação ────────────────────────────────
+    function fmtDate(iso) {
+      if (!iso) return '—'
+      return new Date(iso).toLocaleString('pt-BR', {
+        day:    '2-digit',
+        month:  '2-digit',
+        hour:   '2-digit',
+        minute: '2-digit',
       })
     }
 
-    // ── Atualiza cards ──────────────────────────────────────────
-    function updateCards(d) {
-      document.getElementById('val-jobs-today').textContent =
-        d.jobs_today ?? '—'
-
-      document.getElementById('val-saved-minutes').textContent =
-        d.saved_minutes != null ? d.saved_minutes + ' min' : '—'
-
-      const rate   = parseFloat(d.success_rate)
-      const rateEl = document.getElementById('val-success-rate')
-      if (isNaN(rate)) {
-        rateEl.textContent = '—'
-        rateEl.className   = 'card-value'
-      } else {
-        rateEl.textContent = rate.toFixed(1) + '%'
-        rateEl.className   = 'card-value ' + (rate >= 90 ? 'is-success' : 'is-fail')
-      }
-
-      const failures = parseInt(d.failures_24h, 10)
-      const failEl   = document.getElementById('val-failures-24h')
-      failEl.textContent = isNaN(failures) ? '—' : failures
-      failEl.className   = 'card-value ' + (failures > 0 ? 'is-fail' : '')
+    function fmtDuration(createdAt, finishedAt) {
+      if (!createdAt || !finishedAt) return '—'
+      const ms = new Date(finishedAt) - new Date(createdAt)
+      if (isNaN(ms) || ms < 0) return '—'
+      const s = Math.floor(ms / 1000)
+      if (s < 60) return `${s}s`
+      const m = Math.floor(s / 60)
+      const rem = s % 60
+      return rem > 0 ? `${m}m ${rem}s` : `${m}m`
     }
 
-    // ── Atualiza gráfico ────────────────────────────────────────
-    function updateChart(d) {
-      chart.data.labels           = d.labels  ?? []
-      chart.data.datasets[0].data = d.success ?? []
-      chart.data.datasets[1].data = d.failed  ?? []
-      chart.data.datasets[2].data = d.timeout ?? []
-      chart.update()
+    // ── Renderiza cards ──────────────────────────────────────────
+// ── Renderiza cards ──────────────────────────────────────────
+  function renderCards(d) {
+    // 1. Jobs hoje
+    document.getElementById('val-jobs-today').textContent = d.totalJobs ?? '—';
+
+    // 2. Tempo economizado
+    document.getElementById('val-saved-minutes').textContent =
+      d.savedMinutes != null ? d.savedMinutes + ' min' : '—';
+
+    // 3. Taxa de sucesso e Falhas (calculados a partir de statusLast24h)
+    const status = d.statusLast24h || {};
+    const successCount = status.Success || 0; // Usando 'Success' como você mencionou
+    const failedCount = status.Failed || 0;   // Assumindo que falhas virão como 'Failed'
+    const totalLast24h = Object.values(status).reduce((sum, count) => sum + count, 0);
+
+    // Taxa de sucesso
+    const rateEl = document.getElementById('val-success-rate');
+    if (totalLast24h > 0) {
+      const rate = (successCount / totalLast24h) * 100;
+      rateEl.textContent = rate.toFixed(1) + '%';
+      rateEl.className = 'card-value ' + (rate >= 90 ? 'is-success' : 'is-fail');
+    } else {
+      rateEl.textContent = '—';
+      rateEl.className = 'card-value';
     }
+
+    // Falhas
+    const failEl = document.getElementById('val-failures-24h');
+    failEl.textContent = failedCount;
+    failEl.className = 'card-value ' + (failedCount > 0 ? 'is-fail' : '');
+  }
+    // ── Renderiza lista de jobs ──────────────────────────────────
+// ── Renderiza lista de jobs ──────────────────────────────────
+function renderJobs(apiJobs) {
+  const list = document.getElementById('job-list');
+  document.getElementById('job-count').textContent =
+    apiJobs.length + ' registro' + (apiJobs.length !== 1 ? 's' : '');
+
+  if (!apiJobs.length) {
+    list.innerHTML = '<li class="job-empty">Nenhum job encontrado.</li>';
+    return;
+  }
+
+  // Mapeia os status da API para os status visuais do CSS
+  const statusMap = {
+    pending: 'running',
+    finished: 'success',
+    failed: 'failed',
+    timeout: 'timeout'
+  };
+
+  list.innerHTML = apiJobs.map(job => {
+    // Mapeia os campos da API para o formato esperado pelo frontend
+    const j = {
+      id: job.ID,
+      jira_issue: job.IssueKey,
+      tenant_name: job.TentantName,
+      status: (job.Status || 'unknown').toLowerCase(),
+      created_at: job.CreatedAt,
+      finished_at: job.FinishedAt,
+      job_type: job.JobType
+    };
+
+    const visualStatus = statusMap[j.status] || 'unknown';
+    const dur = fmtDuration(j.created_at, j.finished_at);
+    const shortId = (j.id || '').substring(0, 8);
+
+    return `
+      <li class="job-item">
+        <div class="job-status-bar ${visualStatus}"></div>
+        <span class="job-id" title="${j.id}">${shortId}...</span>
+        <span class="badge badge-jira">${j.jira_issue || '—'}</span>
+        <span class="badge badge-tenant">${j.tenant_name || '—'}</span>
+        <span class="job-type-label">${j.job_type || '—'}</span>
+        <span class="badge-status ${visualStatus}">${j.status}</span>
+        <span class="job-ts">${fmtDate(j.created_at)}</span>
+        <span class="job-ts">${fmtDate(j.finished_at)}</span>
+        <span class="job-duration">${dur}</span>
+      </li>
+    `;
+  }).join('');
+}
 
     // ── Online / offline ────────────────────────────────────────
     function setOnline() {
@@ -234,47 +271,53 @@
     function setOffline() {
       document.getElementById('pulse-dot').classList.add('is-offline')
       document.getElementById('pulse-label').textContent = 'offline'
-
       document.getElementById('stale-time').textContent = lastOkTime
         ? lastOkTime.toLocaleTimeString('pt-BR')
         : 'horário desconhecido'
       document.getElementById('stale-banner').hidden = false
     }
 
-    // ── Fetch ───────────────────────────────────────────────────
-    async function fetchAll() {
-      const fetchJSON = url =>
-        fetch(url).then(r => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`)
-          return r.json()
-        })
+    // ── Fetch ────────────────────────────────────────────────────
+    // ── Fetch ────────────────────────────────────────────────────
+  async function fetchAll() {
+    const fetchJSON = url =>
+      fetch(url).then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      });
 
-      const [summary, timeline] = await Promise.allSettled([
-        fetchJSON(API_SUMMARY),
-        fetchJSON(API_TIMELINE),
-      ])
+    const [summaryResult, savedMinutesResult, jobsResult] = await Promise.allSettled([
+      fetchJSON(API_SUMMARY),
+      fetchJSON(API_SAVED_MINUTES),
+      fetchJSON(API_JOBS),
+    ]);
 
-      if (summary.status === 'fulfilled' && timeline.status === 'fulfilled') {
-        updateCards(summary.value)
-        updateChart(timeline.value)
-        lastOkTime = new Date()
-        document.getElementById('last-updated').textContent =
-          'atualizado às ' + lastOkTime.toLocaleTimeString('pt-BR')
-        setOnline()
-      } else {
-        setOffline()
-        // dados anteriores permanecem visíveis no chart e nos cards
-        console.warn('[maestro] fetch falhou —',
-          summary.reason  ?? 'summary ok',
-          timeline.reason ?? 'timeline ok',
-        )
-      }
+    // Combina os resultados de summary e savedMinutes antes de renderizar os cards
+    if (summaryResult.status === 'fulfilled' || savedMinutesResult.status === 'fulfilled') {
+      const summaryData = summaryResult.value || {};
+      const savedMinutesData = savedMinutesResult.value || {};
+      
+      const combinedData = {
+        ...summaryData,
+        ...savedMinutesData
+      };
+      renderCards(combinedData);
     }
 
-    // ── Boot ────────────────────────────────────────────────────
-    initChart()
-    fetchAll()
-    setInterval(fetchAll, REFRESH_MS)
+    if (jobsResult.status === 'fulfilled') {
+      renderJobs(jobsResult.value);
+    }
+
+    if (summaryResult.status === 'fulfilled' || jobsResult.status === 'fulfilled') {
+      lastOkTime = new Date();
+      document.getElementById('last-updated').textContent =
+        'atualizado às ' + lastOkTime.toLocaleTimeString('pt-BR');
+      setOnline();
+    } else {
+      setOffline();
+      console.warn('[maestro] fetch falhou —', summaryResult.reason, jobsResult.reason);
+    }
+  }
   </script>
 
 </body>
